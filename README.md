@@ -5,7 +5,7 @@ A Concrete CMS Package to make it enable to send responders a copy of their repo
 ## Getting Started
 
 After install this package, you can send a custom email notification per a form.
-You need to define config file as `application/config/md_form_responder_notification/forms.php` like this:
+You need to add config file at `application/config/md_form_responder_notification/forms.php` like this:
 
 ```php
 <?php
