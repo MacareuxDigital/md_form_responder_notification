@@ -38,7 +38,6 @@ $body = t("Dear %s,
 Thank you for writing to us.
 Here is what you have submitted:
 
-Your Name: %s
 Topic: %s
 Message: %s
 
