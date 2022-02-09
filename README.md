@@ -28,6 +28,7 @@ Then, please add email templates you defined in the config file like this:
 
 ```php
 <?php
+// application/mail/contact_form_response.php
 
 defined('C5_EXECUTE') or die("Access Denied.");
 
@@ -49,3 +50,7 @@ Attribute values are automatically mapped as `$attribute_key_handle`.
 ## ToDo
 
 Dashboard page
+
+## Lincense
+
+MIT License
