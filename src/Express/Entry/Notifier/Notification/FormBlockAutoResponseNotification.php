@@ -10,6 +10,7 @@ use Concrete\Core\Express\Entry\Notifier\Notification\AbstractFormBlockSubmissio
 use Concrete\Core\Mail\Service;
 use Concrete\Core\Package\PackageService;
 use Doctrine\ORM\EntityManagerInterface;
+use Macareux\Package\FormResponderNotification\Express\Service\ExpressFormService;
 use Psr\Log\LoggerInterface;
 
 class FormBlockAutoResponseNotification extends AbstractFormBlockSubmissionNotification
@@ -18,27 +19,39 @@ class FormBlockAutoResponseNotification extends AbstractFormBlockSubmissionNotif
     {
         /** @var LoggerInterface $logger */
         $logger = $this->app->make(LoggerInterface::class);
+        /** @var ExpressFormService $service */
+        $service = $this->app->make(ExpressFormService::class, ['object' => $entry]);
 
-        $toEmail = $this->getToEmail($entry);
-        $fromEmail = $this->getFromEmail($entry);
-        $replyToEmail = $this->getReplyToEmail($entry);
-        $template = $this->getTemplate($entry);
+        $toEmail = $service->getToEmail($this->blockController);
+        $fromEmail = $service->getFromEmail();
+        $replyToEmail = $service->getReplyToEmail() ?: $fromEmail;
+        $template = $service->getTemplateFile();
+        $subject = $service->getTemplateSubject();
+        $html = $service->getTemplateHtml();
+        $body = $service->getTemplateBody();
 
-        if ($toEmail && $fromEmail && $replyToEmail && $template) {
+        if ($toEmail && $fromEmail && $replyToEmail && ($template || ($subject && $html && $body))) {
             /** @var Service $mh */
             $mh = $this->app->make('mail');
             $mh->to($toEmail);
             $mh->from($fromEmail);
             $mh->replyto($replyToEmail);
-            $mh->addParameter('entity', $entry->getEntity());
-            $mh->addParameter('formName', $this->getFormName($entry));
-            $mh->addParameter('attributes', $this->getAttributeValues($entry));
-            foreach ($this->getAttributeValues($entry) as $value) {
-                /** @var Key $key */
-                $key = $value->getAttributeKey();
-                $mh->addParameter($key->getAttributeKeyHandle(), $value->getPlainTextValue());
+            if ($template) {
+                $mh->addParameter('entity', $service->getEntity());
+                $mh->addParameter('formName', $service->getFormName());
+                $attributeValues = $service->getAttributeValues();
+                $mh->addParameter('attributes', $attributeValues);
+                foreach ($attributeValues as $value) {
+                    $key = $value->getAttributeKey();
+                    $mh->addParameter($key->getAttributeKeyHandle(), $value->getPlainTextValue());
+                }
+                $mh->load($template);
             }
-            $mh->load($template);
+            if ($subject && $html && $body) {
+                $mh->setSubject($subject);
+                $mh->setBody($body);
+                $mh->setBodyHTML($html);
+            }
             try {
                 $mh->sendMail();
             } catch (\Exception $e) {
@@ -52,80 +65,8 @@ class FormBlockAutoResponseNotification extends AbstractFormBlockSubmissionNotif
                     )
                 );
             }
-        }
-    }
-
-    protected function getToEmail(Entry $entry): string
-    {
-        /** @var EntityManagerInterface $entityManager */
-        $entityManager = $this->app->make(EntityManagerInterface::class);
-        $replyToEmailControlID = $this->blockController->replyToEmailControlID;
-        if ($replyToEmailControlID) {
-            $control = $entityManager->getRepository(Control::class)->findOneById($replyToEmailControlID);
-            if (is_object($control)) {
-                foreach ($this->getAttributeValues($entry) as $attribute) {
-                    if ($attribute->getAttributeKey()->getAttributeKeyID() == $control->getAttributeKey()->getAttributeKeyID()) {
-                        return $attribute->getValue();
-                    }
-                }
-            }
         } else {
-            foreach ($this->getAttributeValues($entry) as $attribute) {
-                if ($attribute->getAttributeTypeObject()->getAttributeTypeHandle() === 'email') {
-                    return $attribute->getValue();
-                }
-            }
+            $logger->debug(sprintf("Auto response for %s not sent. Missing email or template.", $entry->getPublicIdentifier()));
         }
-
-        return '';
-    }
-
-    /**
-     * @param Entry $entry
-     * @return AttributeValueInterface[]
-     */
-    protected function getAttributeValues(Entry $entry): array
-    {
-        return $entry->getEntity()->getAttributeKeyCategory()->getAttributeValues($entry);
-    }
-
-    protected function getConfig(Entry $entry, string $key): string
-    {
-        /** @var PackageService $service */
-        $service = $this->app->make(PackageService::class);
-        $package = $service->getClass('md_form_responder_notification');
-        $config = $package->getFileConfig();
-
-        return (string)$config->get('forms.' . $entry->getEntity()->getHandle() . '.' . $key, '');
-    }
-
-    protected function getFromEmail(Entry $entry): string
-    {
-        $email = $this->getConfig($entry, 'from');
-        if (empty($email)) {
-            $email = (string) $this->app->make('config')->get('concrete.email.form_block.address');
-        }
-
-        return $email;
-    }
-
-    protected function getReplyToEmail(Entry $entry): string
-    {
-        $email = $this->getConfig($entry, 'reply_to');
-        if (empty($email)) {
-            $email = (string) $this->app->make('config')->get('concrete.email.form_block.address');
-        }
-
-        return $email;
-    }
-
-    protected function getTemplate(Entry $entry): string
-    {
-        return $this->getConfig($entry, 'template');
-    }
-
-    protected function getFormName(Entry $entry): string
-    {
-        return $entry->getEntity()->getEntityDisplayName();
     }
 }
