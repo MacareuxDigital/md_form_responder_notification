@@ -15,11 +15,22 @@ $templateFile = $templateFile ?? '';
 $templateSubject = $templateSubject ?? '';
 $templateHtml = $templateHtml ?? '';
 $templateBody = $templateBody ?? '';
+$sendToLoggedUser = $sendToLoggedUser ?? false;
+$disableAutoResponse = $disableAutoResponse ?? false;
+
 /** @var \Concrete\Core\Attribute\AttributeKeyInterface[] $keys */
 $keys = $keys ?? [];
 ?>
 <form method="post" action="<?= $view->action('save', $entityID) ?>">
     <?php $token->output('save_form_response_settings') ?>
+    <fieldset>
+        <legend><?= t('Auto-Response') ?></legend>
+        <div class="form-group">
+            <?= $form->checkbox('disableAutoResponse', 1, $disableAutoResponse) ?>
+            <?= $form->label('disableAutoResponse', t('Disable Auto-Response'), ['class' => 'form-check-label']) ?>
+            <p class="small text-muted"><?= t('If checked, no automatic emails will be sent, but templates are still editable.') ?></p>
+        </div>
+    </fieldset>
     <fieldset>
         <legend><?= t('Email Settings') ?></legend>
         <div class="form-group">
@@ -29,6 +40,10 @@ $keys = $keys ?? [];
         <div class="form-group">
             <?= $form->label('replyTo', t('Reply-To Email')) ?>
             <?= $form->email('replyTo', $replyTo) ?>
+        </div>
+        <div class="form-group">
+            <?= $form->checkbox('sendToLoggedUser', 1, $sendToLoggedUser) ?>
+            <?= $form->label('sendToLoggedUser', t('Send an email to the logged-in user'), ['class' => 'form-check-label']) ?>
         </div>
     </fieldset>
     <fieldset>
