@@ -12,7 +12,7 @@ class Controller extends Package
 {
     protected $pkgHandle = 'md_form_responder_notification';
     protected $appVersionRequired = '8.5.5';
-    protected $pkgVersion = '0.1.0';
+    protected $pkgVersion = '0.1.1';
     protected $pkgAutoloaderRegistries = [
         'src' => '\Macareux\Package\FormResponderNotification',
     ];
