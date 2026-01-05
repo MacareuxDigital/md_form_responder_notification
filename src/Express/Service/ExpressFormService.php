@@ -15,6 +15,8 @@ use Concrete\Core\Package\PackageService;
 use Concrete\Core\Support\Facade\Application;
 use Doctrine\ORM\EntityManagerInterface;
 use Macareux\Package\FormResponderNotification\Editor\LinkAbstractor;
+use Concrete\Core\User\User;
+use Concrete\Core\User\UserInfoRepository;
 
 class ExpressFormService implements ApplicationAwareInterface
 {
@@ -180,6 +182,38 @@ class ExpressFormService implements ApplicationAwareInterface
         foreach ($attributeValues as $value) {
             $key = $value->getAttributeKey();
             $text = str_replace('%' . $key->getAttributeKeyHandle() . '%', $value->getPlainTextValue(), $text);
+        }
+
+        // Support user tokens: %user_<attribute_handle>% for the currently logged-in user
+        if (preg_match_all('/%user_([a-zA-Z0-9_]+)%/', $text, $matches)) {
+            $replacements = [];
+            /** @var User $user */
+            $user = $this->app->make(User::class);
+            $ui = null;
+            if ($user && $user->isRegistered()) {
+                /** @var UserInfoRepository $repo */
+                $repo = $this->app->make(UserInfoRepository::class);
+                $ui = $repo->getByID($user->getUserID());
+            }
+
+            foreach ($matches[1] as $handle) {
+                $token = '%user_' . $handle . '%';
+                if (!array_key_exists($token, $replacements)) {
+                    $valueText = '';
+                    if ($ui) {
+                        $userAttributeValue = $ui->getAttributeValueObject($handle);
+                        if ($userAttributeValue) {
+                            // Prefer plain text value to avoid HTML in emails
+                            $valueText = $userAttributeValue->getPlainTextValue();
+                        }
+                    }
+                    $replacements[$token] = $valueText;
+                }
+            }
+
+            if ($replacements) {
+                $text = strtr($text, $replacements);
+            }
         }
 
         return $text;
