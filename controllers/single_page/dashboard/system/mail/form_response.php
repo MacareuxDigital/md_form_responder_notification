@@ -3,6 +3,7 @@
 namespace Concrete\Package\MdFormResponderNotification\Controller\SinglePage\Dashboard\System\Mail;
 
 use Concrete\Block\ExpressForm\Controller;
+use Concrete\Core\Attribute\Category\UserCategory;
 use Concrete\Core\Editor\LinkAbstractor;
 use Concrete\Core\Entity\Express\Entity;
 use Concrete\Core\Error\UserMessageException;
@@ -63,6 +64,10 @@ class FormResponse extends DashboardPageController
             $this->set('disableAutoResponse', (bool) $service->getConfig('disable_auto_response'));
 
             $this->set('keys', $service->getAttributeKeys());
+
+            /** @var UserCategory $userAttributeCategory */
+            $userAttributeCategory = $this->app->make(UserCategory::class);
+            $this->set('user_keys', $userAttributeCategory->getList());
 
             $this->set('pageTitle', t('Form Response Settings for "%s" form', $service->getFormName()));
             $this->render('/dashboard/system/mail/form_response/form', 'md_form_responder_notification');
