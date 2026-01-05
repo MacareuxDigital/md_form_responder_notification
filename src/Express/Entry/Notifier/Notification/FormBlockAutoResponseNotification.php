@@ -9,6 +9,7 @@ use Concrete\Core\Entity\Express\Entry;
 use Concrete\Core\Express\Entry\Notifier\Notification\AbstractFormBlockSubmissionNotification;
 use Concrete\Core\Mail\Service;
 use Concrete\Core\Package\PackageService;
+use Concrete\Core\User\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Macareux\Package\FormResponderNotification\Express\Service\ExpressFormService;
 use Psr\Log\LoggerInterface;
@@ -22,7 +23,25 @@ class FormBlockAutoResponseNotification extends AbstractFormBlockSubmissionNotif
         /** @var ExpressFormService $service */
         $service = $this->app->make(ExpressFormService::class, ['object' => $entry]);
 
+        // If the "disable_auto_response" flag is enabled in the form settings, skip sending the auto-response entirely.
+        if ($service->getConfig('disable_auto_response')) {
+            $logger->debug(sprintf(
+                "Auto-response disabled by config for form %s (auto-response skipped)",
+                $service->getFormName()
+            ));
+            // Return early to prevent any further processing or email sending.
+            return;
+        }
+
+        $user = new User();
         $toEmail = $service->getToEmail($this->blockController);
+        $sendToLoggedUser = (bool) $service->getConfig('send_to_logged_user');
+
+        if (!$toEmail && $sendToLoggedUser && $user->isRegistered()) {
+            $userInfo = $user->getUserInfoObject();
+            $toEmail = $userInfo ? $userInfo->getUserEmail() : null;
+        }
+
         $fromEmail = $service->getFromEmail();
         $replyToEmail = $service->getReplyToEmail() ?: $fromEmail;
         $template = $service->getTemplateFile();

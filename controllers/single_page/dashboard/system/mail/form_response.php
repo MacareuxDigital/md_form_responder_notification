@@ -59,6 +59,8 @@ class FormResponse extends DashboardPageController
             $this->set('templateSubject', $service->getTemplateSubject(true));
             $this->set('templateHtml', LinkAbstractor::translateFromEditMode($service->getTemplateHtml(true)));
             $this->set('templateBody', $service->getTemplateBody(true));
+            $this->set('sendToLoggedUser', (bool) $service->getConfig('send_to_logged_user'));
+            $this->set('disableAutoResponse', (bool) $service->getConfig('disable_auto_response'));
 
             $this->set('keys', $service->getAttributeKeys());
 
@@ -95,6 +97,8 @@ class FormResponse extends DashboardPageController
             $templateSubject = $this->request->request->get('templateSubject');
             $templateHtml = $this->request->request->get('templateHtml');
             $templateBody = $this->request->request->get('templateBody');
+            $sendToLoggedUser = (bool) $this->request->request->get('sendToLoggedUser');
+            $disableAutoResponse = (bool) $this->request->request->get('disableAutoResponse');
 
             if ($templateType === 'file') {
                 if (!$templateFile) {
@@ -124,6 +128,8 @@ class FormResponse extends DashboardPageController
                 $service->setConfig('from', $from);
                 $service->setConfig('reply_to', $replyTo);
                 $service->setConfig('template', $template);
+                $service->setConfig('send_to_logged_user', $sendToLoggedUser);
+                $service->setConfig('disable_auto_response', $disableAutoResponse);
 
                 $this->flash('success', t('Form response settings have been saved.'));
 
