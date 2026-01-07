@@ -114,9 +114,9 @@ class ExpressFormService implements ApplicationAwareInterface
         return $email;
     }
 
-    public function getConfig(string $key)
+    public function getConfig(string $key, $default = '')
     {
-        return $this->config->get('forms.' . $this->getEntity()->getHandle() . '.' . $key, '');
+        return $this->config->get('forms.' . $this->getEntity()->getHandle() . '.' . $key, $default);
     }
 
     public function setConfig(string $key, $value)
