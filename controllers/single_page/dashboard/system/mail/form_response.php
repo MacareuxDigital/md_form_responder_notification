@@ -61,7 +61,7 @@ class FormResponse extends DashboardPageController
             $this->set('templateHtml', LinkAbstractor::translateFromEditMode($service->getTemplateHtml(true)));
             $this->set('templateBody', $service->getTemplateBody(true));
             $this->set('sendToLoggedUser', (bool) $service->getConfig('send_to_logged_user'));
-            $this->set('disableAutoResponse', (bool) $service->getConfig('disable_auto_response'));
+            $this->set('disableAutoResponse', (bool) $service->getConfig('disable_auto_response', true));
 
             $this->set('keys', $service->getAttributeKeys());
 

@@ -16,7 +16,7 @@ $templateSubject = $templateSubject ?? '';
 $templateHtml = $templateHtml ?? '';
 $templateBody = $templateBody ?? '';
 $sendToLoggedUser = $sendToLoggedUser ?? false;
-$disableAutoResponse = $disableAutoResponse ?? false;
+$disableAutoResponse = $disableAutoResponse ?? true;
 
 /** @var \Concrete\Core\Attribute\AttributeKeyInterface[] $keys */
 $keys = $keys ?? [];
