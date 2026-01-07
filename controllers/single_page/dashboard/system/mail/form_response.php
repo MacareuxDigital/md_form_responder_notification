@@ -3,6 +3,7 @@
 namespace Concrete\Package\MdFormResponderNotification\Controller\SinglePage\Dashboard\System\Mail;
 
 use Concrete\Block\ExpressForm\Controller;
+use Concrete\Core\Attribute\Category\UserCategory;
 use Concrete\Core\Editor\LinkAbstractor;
 use Concrete\Core\Entity\Express\Entity;
 use Concrete\Core\Error\UserMessageException;
@@ -59,8 +60,14 @@ class FormResponse extends DashboardPageController
             $this->set('templateSubject', $service->getTemplateSubject(true));
             $this->set('templateHtml', LinkAbstractor::translateFromEditMode($service->getTemplateHtml(true)));
             $this->set('templateBody', $service->getTemplateBody(true));
+            $this->set('sendToLoggedUser', (bool) $service->getConfig('send_to_logged_user'));
+            $this->set('disableAutoResponse', (bool) $service->getConfig('disable_auto_response', true));
 
             $this->set('keys', $service->getAttributeKeys());
+
+            /** @var UserCategory $userAttributeCategory */
+            $userAttributeCategory = $this->app->make(UserCategory::class);
+            $this->set('user_keys', $userAttributeCategory->getList());
 
             $this->set('pageTitle', t('Form Response Settings for "%s" form', $service->getFormName()));
             $this->render('/dashboard/system/mail/form_response/form', 'md_form_responder_notification');
@@ -95,6 +102,8 @@ class FormResponse extends DashboardPageController
             $templateSubject = $this->request->request->get('templateSubject');
             $templateHtml = $this->request->request->get('templateHtml');
             $templateBody = $this->request->request->get('templateBody');
+            $sendToLoggedUser = (bool) $this->request->request->get('sendToLoggedUser');
+            $disableAutoResponse = (bool) $this->request->request->get('disableAutoResponse');
 
             if ($templateType === 'file') {
                 if (!$templateFile) {
@@ -124,6 +133,8 @@ class FormResponse extends DashboardPageController
                 $service->setConfig('from', $from);
                 $service->setConfig('reply_to', $replyTo);
                 $service->setConfig('template', $template);
+                $service->setConfig('send_to_logged_user', $sendToLoggedUser);
+                $service->setConfig('disable_auto_response', $disableAutoResponse);
 
                 $this->flash('success', t('Form response settings have been saved.'));
 
