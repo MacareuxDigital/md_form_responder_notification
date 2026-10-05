@@ -15,6 +15,8 @@ use Concrete\Core\Package\PackageService;
 use Concrete\Core\Support\Facade\Application;
 use Doctrine\ORM\EntityManagerInterface;
 use Macareux\Package\FormResponderNotification\Editor\LinkAbstractor;
+use Concrete\Core\User\User;
+use Concrete\Core\User\UserInfoRepository;
 
 class ExpressFormService implements ApplicationAwareInterface
 {
@@ -114,9 +116,9 @@ class ExpressFormService implements ApplicationAwareInterface
         return $email;
     }
 
-    public function getConfig(string $key)
+    public function getConfig(string $key, $default = '')
     {
-        return $this->config->get('forms.' . $this->getEntity()->getHandle() . '.' . $key, '');
+        return $this->config->get('forms.' . $this->getEntity()->getHandle() . '.' . $key, $default);
     }
 
     public function setConfig(string $key, $value)
@@ -179,10 +181,58 @@ class ExpressFormService implements ApplicationAwareInterface
         $attributeValues = $this->getAttributeValues();
         foreach ($attributeValues as $value) {
             $key = $value->getAttributeKey();
-            $text = str_replace('%' . $key->getAttributeKeyHandle() . '%', $value->getPlainTextValue(), $text);
+            $text = str_replace('%' . $key->getAttributeKeyHandle() . '%', $this->getEmailSafeAttributeValue($value), $text);
+        }
+
+        // Support user tokens: %user_<attribute_handle>% for the currently logged-in user
+        if (preg_match_all('/%user_([a-zA-Z0-9_]+)%/', $text, $matches)) {
+            $replacements = [];
+            /** @var User $user */
+            $user = $this->app->make(User::class);
+            $ui = null;
+            if ($user && $user->isRegistered()) {
+                /** @var UserInfoRepository $repo */
+                $repo = $this->app->make(UserInfoRepository::class);
+                $ui = $repo->getByID($user->getUserID());
+            }
+
+            foreach ($matches[1] as $handle) {
+                $token = '%user_' . $handle . '%';
+                if (!array_key_exists($token, $replacements)) {
+                    $valueText = '';
+                    if ($ui) {
+                        $userAttributeValue = $ui->getAttributeValueObject($handle);
+                        if ($userAttributeValue) {
+                            $valueText = $this->getEmailSafeAttributeValue($userAttributeValue);
+                        }
+                    }
+                    $replacements[$token] = $valueText;
+                }
+            }
+
+            if ($replacements) {
+                $text = strtr($text, $replacements);
+            }
         }
 
         return $text;
+    }
+
+    /**
+     * Format an attribute value for email subject/body use.
+     *
+     * date_time's getPlainTextValue() always returns ATOM and ignores display mode;
+     * getDisplayValue() respects date / date_text / date_time / text settings and stays plain text.
+     * Other types must keep getPlainTextValue() because getDisplayValue() may return HTML.
+     */
+    public function getEmailSafeAttributeValue(AttributeValueInterface $value): string
+    {
+        $type = $value->getAttributeTypeObject();
+        if ($type && $type->getAttributeTypeHandle() === 'date_time') {
+            return (string) $value->getDisplayValue();
+        }
+
+        return (string) $value->getPlainTextValue();
     }
 
     public function getFormName(): string
