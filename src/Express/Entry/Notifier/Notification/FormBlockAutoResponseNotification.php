@@ -62,7 +62,7 @@ class FormBlockAutoResponseNotification extends AbstractFormBlockSubmissionNotif
                 $mh->addParameter('attributes', $attributeValues);
                 foreach ($attributeValues as $value) {
                     $key = $value->getAttributeKey();
-                    $mh->addParameter($key->getAttributeKeyHandle(), $value->getPlainTextValue());
+                    $mh->addParameter($key->getAttributeKeyHandle(), $service->getEmailSafeAttributeValue($value));
                 }
                 $mh->load($template);
             }
