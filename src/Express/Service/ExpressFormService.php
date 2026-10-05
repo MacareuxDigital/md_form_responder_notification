@@ -181,7 +181,7 @@ class ExpressFormService implements ApplicationAwareInterface
         $attributeValues = $this->getAttributeValues();
         foreach ($attributeValues as $value) {
             $key = $value->getAttributeKey();
-            $text = str_replace('%' . $key->getAttributeKeyHandle() . '%', $value->getPlainTextValue(), $text);
+            $text = str_replace('%' . $key->getAttributeKeyHandle() . '%', $this->getEmailSafeAttributeValue($value), $text);
         }
 
         // Support user tokens: %user_<attribute_handle>% for the currently logged-in user
@@ -203,8 +203,7 @@ class ExpressFormService implements ApplicationAwareInterface
                     if ($ui) {
                         $userAttributeValue = $ui->getAttributeValueObject($handle);
                         if ($userAttributeValue) {
-                            // Prefer plain text value to avoid HTML in emails
-                            $valueText = $userAttributeValue->getPlainTextValue();
+                            $valueText = $this->getEmailSafeAttributeValue($userAttributeValue);
                         }
                     }
                     $replacements[$token] = $valueText;
@@ -217,6 +216,23 @@ class ExpressFormService implements ApplicationAwareInterface
         }
 
         return $text;
+    }
+
+    /**
+     * Format an attribute value for email subject/body use.
+     *
+     * date_time's getPlainTextValue() always returns ATOM and ignores display mode;
+     * getDisplayValue() respects date / date_text / date_time / text settings and stays plain text.
+     * Other types must keep getPlainTextValue() because getDisplayValue() may return HTML.
+     */
+    public function getEmailSafeAttributeValue(AttributeValueInterface $value): string
+    {
+        $type = $value->getAttributeTypeObject();
+        if ($type && $type->getAttributeTypeHandle() === 'date_time') {
+            return (string) $value->getDisplayValue();
+        }
+
+        return (string) $value->getPlainTextValue();
     }
 
     public function getFormName(): string
